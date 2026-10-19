@@ -49,9 +49,8 @@ mark[class^="tj-"] { border-bottom: 1.5px solid currentColor; }
 
 /* pattern */
 .khatam { position: absolute; inset: 0; background: var(--gold); opacity: .14; pointer-events: none;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.3'%3E%3Cpath d='M32 10l6.4 15.6L54 32l-15.6 6.4L32 54l-6.4-15.6L10 32l15.6-6.4z'/%3E%3Crect x='17' y='17' width='30' height='30'/%3E%3Cpath d='M0 0l10 10M64 0L54 10M0 64l10-10M64 64L54 54'/%3E%3C/g%3E%3C/svg%3E") repeat;
-          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.3'%3E%3Cpath d='M32 10l6.4 15.6L54 32l-15.6 6.4L32 54l-6.4-15.6L10 32l15.6-6.4z'/%3E%3Crect x='17' y='17' width='30' height='30'/%3E%3Cpath d='M0 0l10 10M64 0L54 10M0 64l10-10M64 64L54 54'/%3E%3C/g%3E%3C/svg%3E") repeat; }
-.star { clip-path: polygon(50% 0, 64.6% 14.6%, 85.4% 14.6%, 85.4% 35.4%, 100% 50%, 85.4% 64.6%, 85.4% 85.4%, 64.6% 85.4%, 50% 100%, 35.4% 85.4%, 14.6% 85.4%, 14.6% 64.6%, 0 50%, 14.6% 35.4%, 14.6% 14.6%, 35.4% 14.6%); }
+  -webkit-mask: var(--pattern) repeat; mask: var(--pattern) repeat; }
+.star { clip-path: var(--badge-clip, polygon(50% 0, 64.6% 14.6%, 85.4% 14.6%, 85.4% 35.4%, 100% 50%, 85.4% 64.6%, 85.4% 85.4%, 64.6% 85.4%, 50% 100%, 35.4% 85.4%, 14.6% 85.4%, 14.6% 64.6%, 0 50%, 14.6% 35.4%, 14.6% 14.6%, 35.4% 14.6%)); }
 
 /* cover */
 .cover { page: cover; padding: 0 !important; min-height: 297mm; height: 297mm; overflow: hidden; background: var(--cover); color: #fff; display: flex; flex-direction: column; justify-content: space-between; }
@@ -190,7 +189,7 @@ td .sub, th .sub { font-size: .85em; }
 .steps { list-style: none; margin: 0; padding: 0; counter-reset: s; display: grid; gap: 2mm; }
 .steps li { counter-increment: s; display: grid; grid-template-columns: 9mm 1fr; gap: 3mm; border: 1px solid var(--line); border-radius: 3mm; padding: 2mm 3mm; break-inside: avoid; }
 .steps li::before { content: counter(s); width: 9mm; height: 9mm; display: grid; place-items: center; background: var(--uc, var(--primary)); color: #fff; font: 700 10pt var(--f-display);
-  clip-path: polygon(50% 0, 64.6% 14.6%, 85.4% 14.6%, 85.4% 35.4%, 100% 50%, 85.4% 64.6%, 85.4% 85.4%, 64.6% 85.4%, 50% 100%, 35.4% 85.4%, 14.6% 85.4%, 14.6% 64.6%, 0 50%, 14.6% 35.4%, 14.6% 14.6%, 35.4% 14.6%); }
+  clip-path: var(--badge-clip, polygon(50% 0, 64.6% 14.6%, 85.4% 14.6%, 85.4% 35.4%, 100% 50%, 85.4% 64.6%, 85.4% 85.4%, 64.6% 85.4%, 50% 100%, 35.4% 85.4%, 14.6% 85.4%, 14.6% 64.6%, 0 50%, 14.6% 35.4%, 14.6% 14.6%, 35.4% 14.6%)); }
 .steps .tg { font-size: calc(17pt * var(--tg-k)); line-height: var(--tg-lh); display: block; }
 .steps .tr { color: var(--primary); font-size: 9pt; }
 .steps .tr .sub { display: inline; margin-left: 2mm; }
@@ -337,5 +336,24 @@ td .sub, th .sub { font-size: .85em; }
 .ws.ws-cjk td { font: calc(16pt * var(--tg-k))/1 var(--f-tg); }
 .ws-key .ws.ws-cjk td { font-size: 7.5pt; }
 
+/* ---------- culture artwork ---------- */
+.art, .art-icon, .art-corner { display: block; width: 100%; height: auto; overflow: visible; }
+.art .ac, .art-corner .ac, .art-icon .ac { color: var(--art-accent, var(--gold)); }
+.art .ac2 { color: #ffffff; }
+.cover-art { color: #f2c76b; opacity: .9; margin: 4mm -6mm 0; }
+.cover-art .ac { color: #ffffff; }
+.opener-art { color: var(--uc); opacity: .35; margin-top: auto; }
+.lesson-h .head-corner { position: absolute; right: 4mm; top: 4mm; width: 9mm; color: var(--uc); opacity: .5; }
+.cert .cert-corner { position: absolute; width: 18mm; color: var(--gold); }
+.cert .cert-corner.tl { left: 8mm; top: 8mm; } .cert .cert-corner.tr { right: 8mm; top: 8mm; }
+.cert .cert-corner.bl { left: 8mm; bottom: 8mm; } .cert .cert-corner.br { right: 8mm; bottom: 8mm; }
+.cert .cert-art { width: 120mm; color: var(--primary); opacity: .25; }
+[data-motif="fr"] .badge, [data-motif="zh"] .badge { box-shadow: inset 0 0 0 1.2mm var(--uc), inset 0 0 0 1.6mm rgba(255, 255, 255, .85); }
+[data-motif="bn"] .cover-art .ac { color: #f42a41; }
+[data-motif="fr"] .cover-art .ac { color: #ef4135; } [data-motif="fr"] .cover-art .ac2 { color: #8fb0ff; }
+
 /* course theme: Learn Mandarin */
-:root { --primary: #b3261e; --ink: #2a1512; --ink-2: #6b504b; --ink-3: #9a807b; --line: #e6d6d0; --tint: #f1e8e4; --cover: #6a120d; --f-tg: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif; --f-en: "Figtree", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif, "Segoe UI", system-ui, sans-serif; --tg-k: .92; --tg-lh: 1.45; }
+:root { --primary: #b3261e; --ink: #2a1512; --ink-2: #6b504b; --ink-3: #9a807b; --line: #e6d6d0; --tint: #f1e8e4; --cover: #6a120d; --f-tg: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif; --f-en: "Figtree", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif, "Segoe UI", system-ui, sans-serif; --tg-k: .92; --tg-lh: 1.45;
+  --pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 18 H46 V46 H22 V22 H42 V42 H26 V26 H38 V38 H30 V30 H34'/%3E%3Cpath d='M-2 6 C2 0 8 0 10 5 C12 1 17 2 16 7 M54 6 C58 0 64 0 66 5 M-2 62 C2 56 8 56 10 61 M54 62 C58 56 64 56 66 61'/%3E%3C/g%3E%3C/svg%3E");
+  --badge-clip: inset(0 round 9%);
+  --art-accent: #c9a227; }

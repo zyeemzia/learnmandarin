@@ -113,7 +113,7 @@ mark.tj-green, mark.tj-gray, mark.tj-blue, mark.tj-red, mark.tj-orange, mark.tj-
 .brand-mark {
   width: 40px; height: 40px; display: grid; place-items: center; font: 700 28px/1 var(--f-tg);
   color: var(--primary-ink); background: var(--primary); padding-top: 0;
-  clip-path: polygon(50% 0, 64.6% 14.6%, 85.4% 14.6%, 85.4% 35.4%, 100% 50%, 85.4% 64.6%, 85.4% 85.4%, 64.6% 85.4%, 50% 100%, 35.4% 85.4%, 14.6% 85.4%, 14.6% 64.6%, 0 50%, 14.6% 35.4%, 14.6% 14.6%, 35.4% 14.6%);
+  clip-path: var(--badge-clip, polygon(50% 0, 64.6% 14.6%, 85.4% 14.6%, 85.4% 35.4%, 100% 50%, 85.4% 64.6%, 85.4% 85.4%, 64.6% 85.4%, 50% 100%, 35.4% 85.4%, 14.6% 85.4%, 14.6% 64.6%, 0 50%, 14.6% 35.4%, 14.6% 14.6%, 35.4% 14.6%));
 }
 .brand-text { display: flex; flex-direction: column; line-height: 1.15; }
 .brand-text b { font-weight: 700; font-size: 1rem; }
@@ -193,13 +193,12 @@ mark.tj-green, mark.tj-gray, mark.tj-blue, mark.tj-red, mark.tj-orange, mark.tj-
 [data-c="violet"] { --uc: var(--c-violet); --ucs: var(--c-violet-soft); }
 [data-c="cyan"] { --uc: var(--c-cyan); --ucs: var(--c-cyan-soft); }
 
-/* khatam pattern (8-point star lattice) used as a mask so it follows theme colours */
+/* course pattern (set per course in the theme) used as a mask so it follows theme colours */
 .pattern {
   position: absolute; inset: 0; pointer-events: none; background: var(--gold); opacity: .13;
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.3'%3E%3Cpath d='M32 10l6.4 15.6L54 32l-15.6 6.4L32 54l-6.4-15.6L10 32l15.6-6.4z'/%3E%3Crect x='17' y='17' width='30' height='30' transform='rotate(0 32 32)'/%3E%3Cpath d='M0 0l10 10M64 0L54 10M0 64l10-10M64 64L54 54'/%3E%3C/g%3E%3C/svg%3E") repeat;
-          mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.3'%3E%3Cpath d='M32 10l6.4 15.6L54 32l-15.6 6.4L32 54l-6.4-15.6L10 32l15.6-6.4z'/%3E%3Crect x='17' y='17' width='30' height='30' transform='rotate(0 32 32)'/%3E%3Cpath d='M0 0l10 10M64 0L54 10M0 64l10-10M64 64L54 54'/%3E%3C/g%3E%3C/svg%3E") repeat;
+  -webkit-mask: var(--pattern) repeat; mask: var(--pattern) repeat;
 }
-.star-clip { clip-path: polygon(50% 0, 64.6% 14.6%, 85.4% 14.6%, 85.4% 35.4%, 100% 50%, 85.4% 64.6%, 85.4% 85.4%, 64.6% 85.4%, 50% 100%, 35.4% 85.4%, 14.6% 85.4%, 14.6% 64.6%, 0 50%, 14.6% 35.4%, 14.6% 14.6%, 35.4% 14.6%); }
+.star-clip { clip-path: var(--badge-clip, polygon(50% 0, 64.6% 14.6%, 85.4% 14.6%, 85.4% 35.4%, 100% 50%, 85.4% 64.6%, 85.4% 85.4%, 64.6% 85.4%, 50% 100%, 35.4% 85.4%, 14.6% 85.4%, 14.6% 64.6%, 0 50%, 14.6% 35.4%, 14.6% 14.6%, 35.4% 14.6%)); }
 
 /* ---------- Home ---------- */
 .hero {
@@ -426,7 +425,7 @@ td .sub, th .sub { font-size: .85em; }
 .steps li::before {
   content: counter(st); width: 40px; height: 40px; display: grid; place-items: center; background: var(--uc, var(--primary)); color: var(--surface);
   font: 700 1rem var(--f-display);
-  clip-path: polygon(50% 0, 64.6% 14.6%, 85.4% 14.6%, 85.4% 35.4%, 100% 50%, 85.4% 64.6%, 85.4% 85.4%, 64.6% 85.4%, 50% 100%, 35.4% 85.4%, 14.6% 85.4%, 14.6% 64.6%, 0 50%, 14.6% 35.4%, 14.6% 14.6%, 35.4% 14.6%);
+  clip-path: var(--badge-clip, polygon(50% 0, 64.6% 14.6%, 85.4% 14.6%, 85.4% 35.4%, 100% 50%, 85.4% 64.6%, 85.4% 85.4%, 64.6% 85.4%, 50% 100%, 35.4% 85.4%, 14.6% 85.4%, 14.6% 64.6%, 0 50%, 14.6% 35.4%, 14.6% 14.6%, 35.4% 14.6%));
 }
 .steps .st-body { display: grid; gap: 4px; min-width: 0; }
 .steps .st-body b { font-size: 1.02rem; }
@@ -770,7 +769,7 @@ input[type="range"] { accent-color: var(--primary); width: 180px; max-width: 100
 /* ---------- first paint while scripts load ---------- */
 .boot { min-height: 50vh; display: grid; place-content: center; justify-items: center; gap: 12px; color: var(--ink-2); }
 .boot-mark { width: 64px; height: 64px; display: grid; place-items: center; font: 700 40px/1 var(--f-tg); color: var(--primary-ink); background: var(--primary); padding-top: 0;
-  clip-path: polygon(50% 0, 64.6% 14.6%, 85.4% 14.6%, 85.4% 35.4%, 100% 50%, 85.4% 64.6%, 85.4% 85.4%, 64.6% 85.4%, 50% 100%, 35.4% 85.4%, 14.6% 85.4%, 14.6% 64.6%, 0 50%, 14.6% 35.4%, 14.6% 14.6%, 35.4% 14.6%);
+  clip-path: var(--badge-clip, polygon(50% 0, 64.6% 14.6%, 85.4% 14.6%, 85.4% 35.4%, 100% 50%, 85.4% 64.6%, 85.4% 85.4%, 64.6% 85.4%, 50% 100%, 35.4% 85.4%, 14.6% 85.4%, 14.6% 64.6%, 0 50%, 14.6% 35.4%, 14.6% 14.6%, 35.4% 14.6%));
   animation: pulse 1.6s ease-in-out infinite; }
 
 /* ---------- sound setup ---------- */
@@ -870,8 +869,40 @@ input[type="range"] { accent-color: var(--primary); width: 180px; max-width: 100
 .sound-more { margin-top: 6px; }
 .sound-more > summary { cursor: pointer; font-weight: 600; color: var(--primary); margin-bottom: 8px; }
 
+/* ---------- culture artwork (engine/art.py) ---------- */
+.art, .art-icon, .art-corner { display: block; width: 100%; height: auto; overflow: visible; }
+.art .ac, .art-icon .ac, .art-corner .ac { color: var(--art-accent, var(--gold)); }
+.art .ac2 { color: var(--primary); }
+.wotd { padding-bottom: 150px; }
+.wotd-art { position: absolute; left: 0; right: 0; bottom: 0; color: var(--primary-ink); opacity: .5; pointer-events: none; }
+.wotd-art .ac { color: var(--primary-ink); }
+.wotd-art .ac2 { color: var(--primary-ink); opacity: .6; }
+.unit-hero { padding-right: 150px; }
+.unit-hero > div.unit-art { position: absolute; right: 22px; bottom: 0; width: 110px; color: var(--uc); opacity: .5; pointer-events: none; }
+.lesson-head > div.head-corner { position: absolute; right: 14px; top: 14px; width: 34px; color: var(--uc); opacity: .55; }
+.bb-cover { justify-content: flex-start; padding-top: 22px; }
+.bb-art { position: absolute; left: 0; right: 0; bottom: 6px; color: #f2c76b; opacity: .55; }
+.bb-art .ac { color: #ffffff; }
+.foot-art { max-width: 760px; margin: 18px auto 0; padding: 0 16px; color: var(--line); }
+.foot-art .art .ac, .foot-art .art .ac2 { color: var(--ink-3); }
+.boot-art { width: 120px; color: var(--primary); opacity: .8; }
+/* motif details: Paris enamel plaques and Chinese seals get a white inner rim */
+[data-motif="fr"] .u-badge, [data-motif="fr"] .node.done, [data-motif="fr"] .node.next, [data-motif="fr"] .brand-mark,
+[data-motif="zh"] .u-badge, [data-motif="zh"] .node.done, [data-motif="zh"] .node.next, [data-motif="zh"] .brand-mark { box-shadow: inset 0 0 0 3px var(--uc, var(--primary)), inset 0 0 0 4.5px rgba(255, 255, 255, .85); }
+[data-motif="zh"] .u-badge, [data-motif="zh"] .brand-mark { box-shadow: inset 0 0 0 2px var(--uc, var(--primary)), inset 0 0 0 3.5px rgba(255, 255, 255, .9), inset 0 0 0 5px var(--uc, var(--primary)), inset 0 0 0 6px rgba(255, 255, 255, .5); }
+[data-motif="fr"] .hero::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 5px; z-index: 2;
+  background: linear-gradient(90deg, #2348a3 0 33.3%, #ffffff 33.3% 66.6%, #d0283b 66.6%); }
+[data-motif="bn"] .hero::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 5px; z-index: 2; background: linear-gradient(90deg, #0b7a4b 0 70%, #d62839 70%); }
+[data-motif="zh"] .hero::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 5px; z-index: 2; background: linear-gradient(90deg, #b3261e 0 75%, #e0b43a 75%); }
+@media (max-width: 560px) { .unit-hero { padding-right: 20px; } .unit-hero > div.unit-art { width: 80px; opacity: .25; } .wotd { padding-bottom: 120px; } }
+[data-motif="bn"] .bb-art .ac { color: #f42a41; }
+[data-motif="fr"] .bb-art .ac { color: #ef4135; } [data-motif="fr"] .bb-art .ac2 { color: #8fb0ff; }
+
 /* ---------- course theme: Learn Mandarin ---------- */
 :root { --paper: #f8f4f2; --surface-2: #f1e8e4; --ink: #2a1512; --ink-2: #6b504b; --ink-3: #9a807b; --line: #e6d6d0; --primary: #b3261e; --primary-print: #b3261e; --c-teal: #b3261e; --cover: #6a120d;
-  --f-tg: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif; --f-en: "Figtree", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif, "Segoe UI", system-ui, sans-serif; --tg-k: .92; --tg-lh: 1.45; }
-@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --paper: #160c0b; --surface: #201312; --surface-2: #2b1a18; --ink: #f2e6e3; --ink-2: #c3aaa5; --ink-3: #8a716c; --line: #3e2724; --primary: #ff8a7a; --primary-ink: #2a0805; --c-teal: #ff8a7a; } }
-:root[data-theme="dark"] { --paper: #160c0b; --surface: #201312; --surface-2: #2b1a18; --ink: #f2e6e3; --ink-2: #c3aaa5; --ink-3: #8a716c; --line: #3e2724; --primary: #ff8a7a; --primary-ink: #2a0805; --c-teal: #ff8a7a; }
+  --f-tg: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif; --f-en: "Figtree", "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif, "Segoe UI", system-ui, sans-serif; --tg-k: .92; --tg-lh: 1.45;
+  --pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='64' height='64' viewBox='0 0 64 64'%3E%3Cg fill='none' stroke='%23000' stroke-width='1.3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 18 H46 V46 H22 V22 H42 V42 H26 V26 H38 V38 H30 V30 H34'/%3E%3Cpath d='M-2 6 C2 0 8 0 10 5 C12 1 17 2 16 7 M54 6 C58 0 64 0 66 5 M-2 62 C2 56 8 56 10 61 M54 62 C58 56 64 56 66 61'/%3E%3C/g%3E%3C/svg%3E");
+  --badge-clip: inset(0 round 9%);
+  --art-accent: #c9a227; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --paper: #160c0b; --surface: #201312; --surface-2: #2b1a18; --ink: #f2e6e3; --ink-2: #c3aaa5; --ink-3: #8a716c; --line: #3e2724; --primary: #ff8a7a; --primary-ink: #2a0805; --c-teal: #ff8a7a; --art-accent: #f0c94d; } }
+:root[data-theme="dark"] { --paper: #160c0b; --surface: #201312; --surface-2: #2b1a18; --ink: #f2e6e3; --ink-2: #c3aaa5; --ink-3: #8a716c; --line: #3e2724; --primary: #ff8a7a; --primary-ink: #2a0805; --c-teal: #ff8a7a; --art-accent: #f0c94d; }

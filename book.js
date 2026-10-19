@@ -3,6 +3,9 @@
 (function () {
   'use strict';
   const { C, esc, md, plain, hl, fold, prepare, seeded, isHan } = window.LX;
+  const MOTIF = String(C.htmlLang || 'fr').split('-')[0];
+  const ART = (window.LXART || {})[MOTIF] || { scene: '', icon: '', corner: '' };
+  document.documentElement.setAttribute('data-motif', MOTIF);
   const D = prepare();
   const HL = C.htmlLang || 'und';
   const L1 = (C.lang || 'the language').split(' ')[0];
@@ -43,6 +46,7 @@
       <div class="cover-cal" lang="${HL}">${esc(C.native || '')}</div>
       <h1>${esc(C.title || '')}<span class="sub">Book &amp; Workbook</span></h1>
       <p class="cover-lead">${esc(C.tagline || '')}</p>
+      <div class="cover-art">${ART.scene}</div>
       <div class="cover-units" style="grid-template-columns:repeat(${D.units.length},minmax(0,1fr))">${D.units.map(u => `<div><b lang="${HL}">${esc(u.icon)}</b>${md(u.title)}</div>`).join('')}</div>
       <div class="cover-copy">Copyright © ZyeemZia · ${esc(C.domain || '')}</div>
     </div></section>`;
@@ -147,10 +151,10 @@
     let h = `<section class="page opener" data-c="${u.color}"><div class="khatam"></div>
       ${badge(u)}<div class="u-n">Unit ${u.order}</div><h1>${md(u.title)}</h1>
       <p style="font-size:12pt">${md(u.subtitle)}</p>
-      <ol>${u.lessons.map(l => `<li>${md(l.title)}</li>`).join('')}</ol></section>`;
+      <ol>${u.lessons.map(l => `<li>${md(l.title)}</li>`).join('')}</ol><div class="opener-art">${ART.scene}</div></section>`;
     u.lessons.forEach((l, i) => {
       h += `<section class="flow" data-c="${u.color}">
-        <header class="lesson-h"><div class="khatam"></div>${badge(u, l.icon)}<div><div class="meta">Unit ${u.order} · Lesson ${i + 1} · ${l.minutes} minutes</div>
+        <header class="lesson-h"><div class="khatam"></div><div class="head-corner">${ART.corner}</div>${badge(u, l.icon)}<div><div class="meta">Unit ${u.order} · Lesson ${i + 1} · ${l.minutes} minutes</div>
         <h2>${md(l.title)}</h2><p style="color:var(--ink-2);font-size:9.5pt">${md(l.subtitle)}</p></div></header>
         ${l.goals && l.goals.length ? `<ul class="goals">${l.goals.map(g => `<li>${md(g)}</li>`).join('')}</ul>` : ''}
         ${l.blocks.map(b => block(b, ctx)).join('')}
@@ -247,12 +251,13 @@
       <tbody>${D.lessons.map((l, i) => `<tr><td>${i + 1}</td><td>${md(l.title)}</td><td style="width:28mm"></td><td style="width:18mm">&nbsp;&nbsp;&nbsp;/${l.blocks.filter(b => b.type === 'quiz').reduce((n, b) => n + b.items.length, 0)}</td><td style="width:10mm"></td></tr>`).join('')}</tbody></table></section>`;
   }
   function certificate() {
-    return `<section class="flow"><div class="cert"><div class="khatam"></div>
+    return `<section class="flow"><div class="cert"><div class="khatam"></div>${['tl', 'tr', 'bl', 'br'].map(k => `<div class="cert-corner ${k}">${ART.corner}</div>`).join('')}
       <div class="cal" lang="${HL}">${esc((C.wish && C.wish.t) || '')}</div>
       <div class="eyebrow">Certificate of completion</div>
       <h1>${esc(C.title || '')}<span class="sub" lang="${HL}">${esc(C.native || '')}</span></h1>
       <p>This is to certify that</p><div class="name"></div>
       <p>has successfully completed all ${D.lessons.length} lessons of ${esc(C.title || '')}: ${D.units.map(u => plain(u.title)).join(', ')}.</p>
+      <div class="cert-art">${ART.scene}</div>
       <div class="sig"><div>Date</div><div>Teacher / Guardian</div></div>
       <p style="font-size:8.5pt;color:var(--ink-3)">Copyright © ZyeemZia · ${esc(C.domain || '')}</p></div></section>`;
   }

@@ -3,6 +3,9 @@
 (function () {
   'use strict';
   const { C, esc, md, plain, hl, fold, prepare, joiner, isHan } = window.LX;
+  const MOTIF = String(C.htmlLang || 'fr').split('-')[0];
+  const ART = (window.LXART || {})[MOTIF] || { scene: '', icon: '', corner: '' };
+  document.documentElement.setAttribute('data-motif', MOTIF);
   const D = prepare();
   const $ = (s, el) => (el || document).querySelector(s);
   const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
@@ -280,6 +283,7 @@
         <div class="wotd-tr">${esc(w.tr)}</div>
         <div class="wotd-mean">${md(w.mean)}</div>
         ${playBtn(w.t)}
+        <div class="wotd-art">${ART.scene}</div>
       </aside>` : ''}
     </section>
     ${missionsHTML()}
@@ -297,7 +301,7 @@
   }
   function bookBanner() {
     return `<section class="book-banner">
-      <a class="bb-cover" href="book.html" target="_blank" rel="noopener" aria-label="Open the book"><span class="pattern"></span><span class="bb-cal" lang="${HL}">${esc(C.native || '')}</span><b>${esc(C.title || '')}</b><small>ZyeemZia</small></a>
+      <a class="bb-cover" href="book.html" target="_blank" rel="noopener" aria-label="Open the book"><span class="pattern"></span><span class="bb-art">${ART.scene}</span><span class="bb-cal" lang="${HL}">${esc(C.native || '')}</span><b>${esc(C.title || '')}</b><small>ZyeemZia</small></a>
       <div class="bb-text"><div class="eyebrow">Printable book &amp; workbook</div>
         <h2>The whole course in one book</h2>
         <p class="muted">Every lesson, writing practice pages, word searches and sentence puzzles, a progress tracker, answer keys and a certificate. Read it online or download the PDF to print.</p>
@@ -356,7 +360,7 @@
     const un = D.units.find(x => x.id === id); if (!un) return notFound();
     const p = unitProgress(un);
     return `<div class="crumbs"><a href="#learn">${u('learn')}</a> / <span>${u('unit')} ${un.order}</span></div>
-      <section class="unit-hero" data-c="${un.color}" style="margin-top:12px"><div class="pattern"></div>${badge(un)}
+      <section class="unit-hero" data-c="${un.color}" style="margin-top:12px"><div class="pattern"></div><div class="unit-art">${ART.icon}</div>${badge(un)}
         <div><div class="u-num">${u('unit')} ${un.order}</div><h1 class="page-title">${md(un.title)}</h1><p class="muted">${md(un.subtitle)}</p>
         <div class="bar" style="margin-top:12px;max-width:320px"><i style="width:${p.pct}%"></i></div>
         <div class="u-meta" style="max-width:320px;margin-top:4px"><span>${p.d}/${p.n} lessons</span><span>${p.pct}%</span></div></div>
@@ -371,7 +375,7 @@
     const prev = D.lessons[l.gi - 1], next = D.lessons[l.gi + 1];
     return `<article class="lesson" data-c="${un.color}" data-lesson="${l.id}">
       <div class="crumbs"><a href="#learn">${u('learn')}</a> / <a href="#unit/${un.id}">${md(un.title)}</a> / <span>${u('lesson')} ${l.index + 1}</span></div>
-      <header class="lesson-head"><div class="pattern"></div>${badge(un, '', l.icon)}
+      <header class="lesson-head"><div class="pattern"></div><div class="head-corner">${ART.corner}</div>${badge(un, '', l.icon)}
         <div><div class="u-num">${u('unit')} ${un.order} · ${u('lesson')} ${l.index + 1}/${un.lessons.length} · ${l.minutes} ${u('min')}</div>
         <h1>${md(l.title)}</h1><p>${md(l.subtitle)}</p>
         ${l.goals && l.goals.length ? `<ul class="goals" aria-label="${u('goals')}">${l.goals.map(g => `<li><span>${md(g)}</span></li>`).join('')}</ul>` : ''}</div>
@@ -956,6 +960,17 @@
         <button class="btn btn-primary" type="button" data-certdl>Download image (PNG)</button></div>
       <canvas id="certCanvas" class="cert-canvas" width="1600" height="1130" aria-label="Certificate preview"></canvas>`;
   }
+  /* the course artwork as images for the certificate canvas (fixed colours) */
+  const CERT_IMG = {};
+  function certImages() {
+    if (CERT_IMG.scene || !ART.scene) return;
+    const fix = (svg, ink, ac) => { const i = svg.indexOf('>') + 1; return svg.slice(0, i) + `<style>svg{color:${ink}} .ac{color:${ac}} .ac2{color:${ink}}</style>` + svg.slice(i); };
+    const src = svg => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    const ink = getComputedStyle(document.documentElement).getPropertyValue('--primary-print').trim() || '#16425b';
+    [['scene', ART.scene, 600, 200], ['corner', ART.corner, 64, 64]].forEach(([k, svg, w, h]) => {
+      const im = new Image(); im.onload = () => drawCert(); im.src = src(fix(svg.replace(/<svg /, `<svg width="${w}" height="${h}" `), ink, '#b07a17')); CERT_IMG[k] = im;
+    });
+  }
   function drawCert() {
     const c = $('#certCanvas'); if (!c) return; const x = c.getContext('2d'); const W = c.width, H = c.height;
     const cs = getComputedStyle(document.documentElement); const P = cs.getPropertyValue('--primary-print').trim() || '#16425b', GOLD = '#b07a17';
@@ -964,7 +979,10 @@
     x.fillStyle = '#fbfaf6'; x.fillRect(0, 0, W, H);
     x.strokeStyle = GOLD; x.lineWidth = 14; x.strokeRect(40, 40, W - 80, H - 80); x.lineWidth = 3; x.strokeRect(70, 70, W - 140, H - 140);
     const star = (cx, cy, r) => { x.beginPath(); for (let i = 0; i < 16; i++) { const a = Math.PI / 8 * i - Math.PI / 2, rr = i % 2 ? r * .7 : r; x.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); } x.closePath(); x.fill(); };
-    x.fillStyle = P; [[120, 120], [W - 120, 120], [120, H - 120], [W - 120, H - 120]].forEach(([a, b]) => star(a, b, 34));
+    const ready = CERT_IMG.corner && CERT_IMG.corner.complete && CERT_IMG.corner.naturalWidth;
+    if (ready) { [[120, 120], [W - 120, 120], [120, H - 120], [W - 120, H - 120]].forEach(([a, b]) => x.drawImage(CERT_IMG.corner, a - 46, b - 46, 92, 92)); }
+    else { x.fillStyle = P; [[120, 120], [W - 120, 120], [120, H - 120], [W - 120, H - 120]].forEach(([a, b]) => star(a, b, 34)); }
+    if (CERT_IMG.scene && CERT_IMG.scene.complete && CERT_IMG.scene.naturalWidth) { x.save(); x.globalAlpha = .16; x.drawImage(CERT_IMG.scene, W / 2 - 420, H - 380, 840, 280); x.restore(); }
     x.textAlign = 'center';
     x.fillStyle = GOLD; x.font = `700 72px ${TF}`; x.fillText((C.wish && C.wish.t) || '', W / 2, 220);
     x.fillStyle = P; x.font = '600 30px Figtree, sans-serif'; x.fillText('CERTIFICATE OF ACHIEVEMENT', W / 2, 290);
@@ -1004,7 +1022,7 @@
     view.innerHTML = V(arg);
     renderChrome(); initTraces(view);
     if (r === 'contact') mountContact();
-    if (r === 'certificate') { drawCert(); if (document.fonts) document.fonts.ready.then(drawCert); }
+    if (r === 'certificate') { certImages(); drawCert(); if (document.fonts) document.fonts.ready.then(drawCert); }
     window.scrollTo(0, 0); onScroll();
     const l = r === 'lesson' && D.lessons.find(x => x.id === arg);
     document.title = l ? plain(l.title) + ' · ' + (C.title || '') : (C.title || '') + ' · ' + (C.native || '');
