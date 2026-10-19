@@ -20,10 +20,13 @@
   let S = defaults();
   try { S = Object.assign(defaults(), JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* storage blocked */ }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { /* ignore */ } };
-  const today = () => new Date().toISOString().slice(0, 10);
+  const ymd = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const today = () => ymd(new Date());
+  const yesterday = () => { const d = new Date(); d.setDate(d.getDate() - 1); return ymd(d); };
+  const streakNow = () => (S.streak.last === today() || S.streak.last === yesterday()) ? S.streak.count : 0;
   function touchStreak() {
     const t = today(); if (S.streak.last === t) return;
-    const y = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+    const y = yesterday();
     S.streak.count = S.streak.last === y ? S.streak.count + 1 : 1; S.streak.last = t;
   }
   function addXP(n) { S.xp += n; touchStreak(); save(); renderChrome(); }
@@ -127,8 +130,15 @@
     return (4294967296 * (2097151 & h2) + (h1 >>> 0)).toString(36);
   }
   const voiceFor = alt => { const v = S.voice === 'm' ? 'm' : 'f'; return alt ? (v === 'm' ? 'f' : 'm') : v; };
-  let voiceEl = null, quiet = false, speakQueue = [], playId = 0;
-  function stopVoice() { playId++; if (voiceEl) { voiceEl.onended = voiceEl.onerror = null; voiceEl.pause(); } if ('speechSynthesis' in window) speechSynthesis.cancel(); }
+  let voiceEl = null, quiet = false, playId = 0, seqTimer = 0;
+  function stopVoice() {
+    playId++; clearTimeout(seqTimer);
+    if (voiceEl) { voiceEl.onended = voiceEl.onerror = null; voiceEl.pause(); }
+    if ('speechSynthesis' in window) speechSynthesis.cancel();
+    $$('.dl-line.on').forEach(x => x.classList.remove('on'));
+  }
+  /* run the next step of a spoken sequence after a pause, unless something else has played since */
+  const later = (fn, ms) => { const id = playId; clearTimeout(seqTimer); seqTimer = setTimeout(() => { if (id === playId) fn(); }, ms); };
   /* say(text, rate, onend, alt): alt = the other voice (the second speaker in a conversation) */
   function say(text, rate, onend, alt) {
     const clean = sayText(text); if (!clean || quiet) return;
@@ -144,21 +154,23 @@
   }
   function speak(clean, rate, onend) {
     if (!('speechSynthesis' in window)) { soundBanner(); return; }
+    const id = playId;
     if (!voice) pickVoice();
     const ut = new SpeechSynthesisUtterance(clean);
     ut.lang = voice ? voice.lang : (C.voice || 'en-US'); if (voice) ut.voice = voice; ut.rate = rate || S.rate;
-    if (onend) ut.onend = onend;
+    if (onend) ut.onend = () => { if (id === playId) onend(); };
     if (!voice && !voiceWarned && voicesLoaded) { voiceWarned = true; soundBanner(); }
     speechSynthesis.cancel(); speechSynthesis.speak(ut);
   }
   /* speak several lines one after another (dialogues): the two speakers get different voices */
   function sayAll(lines, el) {
-    speakQueue = lines.slice(); let i = 0;
+    const queue = lines.slice(); let i = 0;
     const next = () => {
       $$('.dl-line.on', el).forEach(x => x.classList.remove('on'));
-      if (i >= speakQueue.length) return;
-      const row = el && $$('.dl-line', el)[speakQueue[i].idx]; if (row) row.classList.add('on');
-      const L = speakQueue[i++]; say(L.t, null, () => setTimeout(next, 300), L.idx % 2 === 1);
+      if (i >= queue.length) return;
+      const L = queue[i++];
+      say(L.t, null, () => later(next, 300), L.idx % 2 === 1);   // say() stops older sequences first
+      const row = el && $$('.dl-line', el)[L.idx]; if (row) row.classList.add('on');
     };
     next();
   }
@@ -240,7 +252,7 @@
     $('#mainnav').innerHTML = NAV.map(([k, , href]) => `<a href="${href}" ${active(k)}>${u(k)}</a>`).join('') + `<a class="nav-book" href="book.html" target="_blank" rel="noopener">${icon('book')}${u('book')}</a>`;
     $('#tabbar').innerHTML = NAV.filter(([k]) => TABS.includes(k)).map(([k, ic, href]) => `<a href="${href}" ${active(k)}>${icon(ic)}<span>${u(k)}</span></a>`).join('');
     $('#themeBtn').innerHTML = icon(isDark() ? 'sun' : 'moon');
-    $('#xpChip').innerHTML = `${icon('flame')}<span>${S.streak.count}</span> ${icon('star')}<span>${S.xp}</span><span class="xp-label">XP</span>`;
+    $('#xpChip').innerHTML = `${icon('flame')}<span>${streakNow()}</span> ${icon('star')}<span>${S.xp}</span><span class="xp-label">XP</span>`;
   }
 
   /* ---------------- helpers ---------------- */
@@ -248,7 +260,7 @@
   const unitProgress = un => { const n = un.lessons.length; const d = un.lessons.filter(l => S.done[l.id]).length; return { n, d, pct: n ? Math.round(d / n * 100) : 0 }; };
   const glen = s => [...String(s).replace(/\s/g, '')].length;
   const badge = (unit, extra, txt) => { const t = txt || unit.icon; const n = glen(t); return `<span class="u-badge star-clip ${n >= 4 ? 'bx4' : n === 3 ? 'bx3' : ''}" data-c="${unit.color}" ${extra || ''} lang="${HL}">${esc(t)}</span>`; };
-  const masteredCount = () => Object.values(S.srs).filter(c => c.box >= 4).length;
+  const masteredCount = () => Object.values(S.srs).filter(c => c.box >= 5).length;
   const dayIndex = () => Math.floor(Date.now() / 864e5);
   const wordsOf = b => (b.words || []).map(w => w.t);
 
@@ -271,7 +283,7 @@
         ${nl ? `<div class="muted" style="font-size:.88rem">${u('lesson')} ${nl.gi + 1}: <b>${md(nl.title)}</b></div>` : ''}
         <div class="stats">
           <div class="stat"><b>${S.xp}</b><span>XP</span></div>
-          <div class="stat"><b>${S.streak.count}</b><span>${u('streak')}</span></div>
+          <div class="stat"><b>${streakNow()}</b><span>${u('streak')}</span></div>
           <div class="stat"><b>${doneN}/${D.lessons.length}</b><span>${u('lessonsDone')}</span></div>
           <div class="stat"><b>${masteredCount()}</b><span>${u('words')}</span></div>
         </div>
@@ -528,7 +540,9 @@
   let hzLoading = null;
   function loadHanzi() {
     if (window.HanziWriter) return Promise.resolve();
-    if (!hzLoading) hzLoading = new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/hanzi-writer@3.5.0/dist/hanzi-writer.min.js'; s.onload = res; s.onerror = rej; document.head.appendChild(s); });
+    const add = src => new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = () => { el.remove(); rej(); }; document.head.appendChild(el); });
+    if (!hzLoading) hzLoading = add('vendor/hanzi-writer.min.js').catch(() => add('https://cdn.jsdelivr.net/npm/hanzi-writer@3.5.0/dist/hanzi-writer.min.js'))
+      .catch(e => { hzLoading = null; throw e; });
     return hzLoading;
   }
   function hanziPad(chars, id) {
@@ -547,7 +561,7 @@
     loadHanzi().then(() => boxes.forEach(box => mountHanzi(box))).catch(() => boxes.forEach(b => { b.textContent = b.dataset.hz; b.classList.add('hz-fallback'); }));
   }
   function mountHanzi(box) {
-    if (box._init) return; box._init = true; box.innerHTML = '';
+    if (box._init || !window.HanziWriter) return; box._init = true; box.innerHTML = ''; box.classList.remove('hz-fallback');
     const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
     const size = Math.min(260, Math.max(150, box.clientWidth || 220));
     const w = window.HanziWriter.create(box, box.dataset.hz, {
@@ -600,8 +614,10 @@
       const FONT = css('--f-tg') || 'serif';
       function size() {
         const r = pad.getBoundingClientRect(); dpr = Math.min(2, devicePixelRatio || 1);
+        const keep = ink.width && ink.height ? (() => { const c = document.createElement('canvas'); c.width = ink.width; c.height = ink.height; c.getContext('2d').drawImage(ink, 0, 0); return c; })() : null;
         W = Math.max(10, r.width); H = Math.max(10, r.height);
         [guide, demo, ink].forEach(c => { c.width = W * dpr; c.height = H * dpr; });
+        if (keep) ink.getContext('2d').drawImage(keep, 0, 0, ink.width, ink.height);   // the learner's ink survives a rotation
         [g, dm, k].forEach(c => c.setTransform(dpr, 0, 0, dpr, 0, 0)); drawGuide();
       }
       function layout(ctx) {
@@ -637,9 +653,11 @@
         })(t0);
       }
       function pos(e) { const r = ink.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
-      ink.addEventListener('pointerdown', e => { drawing = true; last = pos(e); ink.setPointerCapture(e.pointerId); dot(last); });
-      ink.addEventListener('pointermove', e => { if (!drawing) return; const p = pos(e); line(last, p); last = p; });
-      ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => ink.addEventListener(ev, () => { drawing = false; }));
+      let pid = null;
+      let fresh = false;
+      ink.addEventListener('pointerdown', e => { if (drawing && e.pointerId !== pid) return; drawing = true; pid = e.pointerId; fresh = true; last = pos(e); ink.setPointerCapture(e.pointerId); dot(last); });
+      ink.addEventListener('pointermove', e => { if (!drawing || e.pointerId !== pid) return; const p = pos(e); line(last, p); last = p; });
+      ['pointerup', 'pointercancel', 'pointerleave'].forEach(ev => ink.addEventListener(ev, e => { if (e.pointerId === pid) { drawing = false; pid = null; } }));
       function style() { k.strokeStyle = css('--primary'); k.fillStyle = k.strokeStyle; k.lineWidth = Math.max(6, Math.min(W, H * 1.4) / 34); k.lineCap = 'round'; k.lineJoin = 'round'; }
       function dot(p) { style(); k.beginPath(); k.arc(p.x, p.y, k.lineWidth / 2, 0, 7); k.fill(); }
       function line(a, b) { style(); k.beginPath(); k.moveTo(a.x, a.y); k.lineTo(b.x, b.y); k.stroke(); }
@@ -670,7 +688,7 @@
         const stars = sc >= 80 ? 3 : sc >= 55 ? 2 : sc >= 30 ? 1 : 0;
         if (!revealed) { revealed = true; drawGuide(); }
         out.innerHTML = `${'★'.repeat(stars)}${'☆'.repeat(3 - stars)} ${sc}%<small>${stars === 3 ? 'Beautiful writing!' : stars ? 'Good! Stay a little closer to the guide.' : 'Try again, slowly.'}</small>`;
-        bumpDaily('write'); if (stars === 3) addXP(2);
+        if (fresh) { fresh = false; bumpDaily('write'); if (stars === 3) addXP(2); }   // one count per new drawing
       }
       size(); new ResizeObserver(() => { const r = pad.getBoundingClientRect(); if (Math.abs(r.width - W) > 2) size(); }).observe(pad);
       if (document.fonts) document.fonts.ready.then(drawGuide);
@@ -713,9 +731,16 @@
         <div class="lm-nav"><button class="btn" type="button" data-letter="${esc(prev.id)}">${icon('arrowL')} ${esc(prev.name)}</button><button class="btn" type="button" data-letter="${esc(next.id)}">${esc(next.name)} ${icon('arrowR')}</button></div>
       </div>`;
     $('#modal').hidden = false; initTraces($('#modalCard')); say(a.say);
+    if (!modalReturn) modalReturn = document.activeElement;
     $('.lm-close').focus();
   }
-  function closeModal() { $('#modal').hidden = true; $('#modalCard').innerHTML = ''; }
+  /* keyboard: every speakable word or line can be focused and played with Enter or Space */
+  function a11ySay(root) { $$('[data-say]:not(button):not(a)', root).forEach(el => { el.tabIndex = 0; el.setAttribute('role', 'button'); }); }
+  let modalReturn = null;
+  function closeModal() {
+    $('#modal').hidden = true; $('#modalCard').innerHTML = '';
+    if (modalReturn && document.contains(modalReturn)) modalReturn.focus(); modalReturn = null;
+  }
 
   /* ---------- flashcards (Leitner) ---------- */
   const INTERVALS = [0, 1, 2, 4, 8, 16, 32];
@@ -751,8 +776,8 @@
       ${w.root ? `<span class="root">${esc(w.root)}</span>` : ''}
       ${w.example ? `<div class="muted" style="font-size:.9rem">${tg(w.example.t, 'tg-in')} — ${md(w.example.mean)}</div>` : ''}`;
     return `<div class="muted" style="text-align:center;font-size:.85rem;margin-bottom:8px">${fcQueue.length} cards left today</div>
-      <div class="card3d ${fcFlip ? 'flip' : ''}" id="fcCard" role="button" tabindex="0" aria-label="${u('flip')}">
-        <div class="card3d-in"><div class="face"><div class="pattern"></div>${front}<span class="hint">${u('flip')}</span></div><div class="face back"><div class="pattern"></div>${back}</div></div></div>
+      <div class="card3d ${fcFlip ? 'flip' : ''}" id="fcCard" role="button" tabindex="0" aria-describedby="fcHint">
+        <div class="card3d-in"><div class="face"><div class="pattern"></div>${front}<span class="hint" id="fcHint">${u('flip')}</span></div><div class="face back"><div class="pattern"></div>${back}</div></div></div>
       <div style="display:flex;justify-content:center;margin:12px 0">${playBtn(w.t)}</div>
       <div class="fc-actions">
         <button class="btn" type="button" data-fc="0" style="color:var(--bad)">${u('again')}<small>soon</small></button>
@@ -821,7 +846,8 @@
     } else {
       const A = D.alphabet; if (A.length < 4) { $('#arena').innerHTML = `<div class="empty">${u('loading')}</div>`; return stopGame(); }
       const a = A[Math.random() * A.length | 0];
-      const same = shuffle(A.filter(x => x.group === a.group && x !== a)), rest = shuffle(A.filter(x => x.group !== a.group));
+      const differs = x => x !== a && x.name !== a.name && x.tr !== a.tr && x.ch !== a.ch;
+      const same = shuffle(A.filter(x => x.group === a.group && differs(x))), rest = shuffle(A.filter(x => x.group !== a.group && differs(x)));
       opts = shuffle([a].concat(same.slice(0, 2), rest).slice(0, 4)).map(x => x.ch); answer = a.ch;
       prompt = `<div class="muted">Find this ${C.hanzi ? 'sound' : 'letter'}</div><div class="big">${esc(a.name)}</div><div class="muted">${esc(a.tr)}</div>`;
     }
@@ -836,7 +862,7 @@
     if (ok) { G.combo++; G.score += 10 + Math.min(G.combo, 10) * 2; } else G.combo = 0;
     if (G.id === 'hunt') { const a = D.alphabet.find(x => x.ch === G.answer); if (a) say(a.say); }
     else if (G.id === 'listen') say(G.answer);
-    setTimeout(() => { if (!G) return; G.lock = false; roundStart(); }, ok ? 450 : 1100);
+    const g = G; setTimeout(() => { if (G !== g) return; G.lock = false; roundStart(); }, ok ? 450 : 1100);
   }
   function endGame() {
     if (!G) return; clearInterval(G.timer); const id = G.id, sc = G.score;
@@ -847,7 +873,9 @@
     G = null;
   }
   function matchStart() {
-    const pool = shuffle(D.vocab.filter(w => glen(w.t) <= 14 && plain(w.mean).length <= 26)).slice(0, 6);
+    const seenMean = new Set();
+    const pool = shuffle(D.vocab.filter(w => glen(w.t) <= 14 && plain(w.mean).length <= 26))
+      .filter(w => { const m = fold(plain(w.mean)).replace(/[^a-z0-9]+/g, ' ').trim(); if (seenMean.has(m)) return false; seenMean.add(m); return true; }).slice(0, 6);
     if (pool.length < 3) { $('#arena').innerHTML = `<div class="empty">${u('loading')}</div>`; return; }
     G.pairs = pool.length; G.found = 0; G.sel = null;
     const tiles = shuffle(pool.flatMap((w, k) => [{ k, html: tg(w.t, 'tg-in'), say: w.t }, { k, html: `<span>${md(w.mean)}</span>` }]));
@@ -861,7 +889,7 @@
     const a = G.sel; G.sel = null; a.classList.remove('sel');
     if (a.dataset.mem === b.dataset.mem) {
       a.classList.add('matched'); b.classList.add('matched'); G.found++;
-      if (G.found === G.pairs) { G.score = Math.max(10, 120 - (G.moves - G.pairs) * 10); setTimeout(endGame, 500); }
+      if (G.found === G.pairs) { G.score = Math.max(10, 120 - (G.moves - G.pairs) * 10); const g = G; setTimeout(() => { if (G === g) endGame(); }, 500); }
     } else [a, b].forEach(x => { x.classList.add('wrong'); setTimeout(() => x.classList.remove('wrong'), 400); });
   }
   function puzzleStart() {
@@ -870,7 +898,7 @@
     G.round = 0; G.rounds = Math.min(5, G.pool.length); puzzleRound();
   }
   function puzzleRound() {
-    const b = G.pool[G.round]; G.sn = b; G.placed = []; G.tries = 0;
+    const b = G.pool[G.round]; G.sn = b; G.placed = []; G.tries = 0; G.solved = false;
     G.tiles = shuffle(b.words.map((w, i) => ({ i, t: w.t })));
     if (G.tiles.every((t, k) => t.i === k)) G.tiles.reverse();
     puzzleDraw();
@@ -884,12 +912,12 @@
       ${state === 'ok' ? `<div class="pz-foot"><button class="btn btn-primary" type="button" data-pnext>${G.round + 1 < G.rounds ? 'Next sentence' : u('finish')} ${icon('arrowR')}</button></div>` : ''}`;
   }
   function puzzleMove(from, k) {
-    if (!G || !G.tiles) return;
+    if (!G || !G.tiles || G.solved) return;
     if (from === 'bank') G.placed.push(G.tiles.splice(k, 1)[0]); else G.tiles.push(G.placed.splice(k, 1)[0]);
     if (!G.tiles.length) {
       const ok = G.placed.every((t, j) => t.t === G.sn.words[j].t);
-      if (ok) { G.score += Math.max(10, 30 - G.tries * 10); puzzleDraw('ok'); say(G.sn.t); confetti(); return; }
-      G.tries++; puzzleDraw('no'); setTimeout(() => { if (G && G.tiles) { G.tiles = G.placed.concat(G.tiles); G.placed = []; puzzleDraw(); } }, 1100);
+      if (ok) { G.solved = true; G.score += Math.max(10, 30 - G.tries * 10); puzzleDraw('ok'); say(G.sn.t); confetti(); return; }
+      G.tries++; puzzleDraw('no'); const g = G; setTimeout(() => { if (G === g && G.tiles) { G.tiles = G.placed.concat(G.tiles); G.placed = []; puzzleDraw(); } }, 1100);
       toast('Not quite. Read the meaning again and retry.'); return;
     }
     puzzleDraw();
@@ -897,7 +925,8 @@
 
   /* ---------- search ---------- */
   function viewSearch(q) {
-    q = decodeURIComponent(q || '').trim(); if (!q) return notFound();
+    try { q = decodeURIComponent(q || ''); } catch (e) { q = String(q || ''); }
+    q = q.trim(); if (!q) return notFound();
     const f = fold(q);
     const ls = D.lessons.filter(l => fold(l.title + ' ' + l.subtitle).includes(f)).slice(0, 20);
     const ws = D.vocab.filter(w => fold(w.t + ' ' + w.tr + ' ' + w.mean).includes(f)).slice(0, 40);
@@ -914,7 +943,7 @@
     return `<div class="page-head"><div class="eyebrow">${u('settings')}</div><h1 class="page-title">Your progress &amp; settings</h1></div>
     <div class="settings">
       <div class="stats" style="margin:0 0 6px">
-        <div class="stat"><b>${S.xp}</b><span>XP</span></div><div class="stat"><b>${S.streak.count}</b><span>${u('streak')}</span></div>
+        <div class="stat"><b>${S.xp}</b><span>XP</span></div><div class="stat"><b>${streakNow()}</b><span>${u('streak')}</span></div>
         <div class="stat"><b>${Object.keys(S.done).length}</b><span>${u('lessonsDone')}</span></div><div class="stat"><b>${masteredCount()}</b><span>${u('words')}</span></div>
       </div>
       <div class="set-row"><div><b>${esc(LANG.split(' ')[0])} text size</b><small>Make the ${esc(LANG.split(' ')[0])} text bigger for easier reading</small></div><input id="tgScale" type="range" min="0.8" max="1.6" step="0.1" value="${S.tgScale}"></div>
@@ -986,13 +1015,13 @@
     x.textAlign = 'center';
     x.fillStyle = GOLD; x.font = `700 72px ${TF}`; x.fillText((C.wish && C.wish.t) || '', W / 2, 220);
     x.fillStyle = P; x.font = '600 30px Figtree, sans-serif'; x.fillText('CERTIFICATE OF ACHIEVEMENT', W / 2, 290);
-    x.fillStyle = '#1b2a33'; x.font = `700 66px ${DF}`; x.fillText(C.title || '', W / 2, 390);
+    x.fillStyle = '#1b2a33'; x.font = `700 66px ${DF}`; x.fillText(C.title || '', W / 2, 390, W - 320);
     x.font = `500 36px ${TF}`; x.fillStyle = '#4c5d66'; x.fillText(C.native || '', W / 2, 445);
     x.font = '400 32px Figtree, sans-serif'; x.fillText('This is to certify that', W / 2, 530);
-    x.fillStyle = '#1b2a33'; x.font = `700 76px ${DF}`; x.fillText(S.certName || '________________', W / 2, 640);
+    x.fillStyle = '#1b2a33'; x.font = `700 76px ${DF}`; x.fillText(S.certName || '________________', W / 2, 640, W - 360);
     x.strokeStyle = GOLD; x.lineWidth = 2; x.beginPath(); x.moveTo(W / 2 - 380, 665); x.lineTo(W / 2 + 380, 665); x.stroke();
     x.fillStyle = '#4c5d66'; x.font = '400 32px Figtree, sans-serif';
-    x.fillText(finished ? `has successfully completed all ${all} lessons of ${C.title}` : `has completed ${doneN} of ${all} lessons, and the journey continues`, W / 2, 750);
+    x.fillText(finished ? `has successfully completed all ${all} lessons of ${C.title}` : `has completed ${doneN} of ${all} lessons, and the journey continues`, W / 2, 750, W - 320);
     x.font = '400 26px Figtree, sans-serif'; x.fillText(`${S.xp} XP · ${new Date().toLocaleDateString('en-GB')} · ${C.domain || ''}`, W / 2, 960);
     x.fillText('Copyright © ZyeemZia', W / 2, 1000);
   }
@@ -1016,10 +1045,10 @@
 
   /* ---------------- router ---------------- */
   function route() {
-    stopGame(); stopVoice();
+    stopGame(); stopVoice(); if (!$('#modal').hidden) closeModal();
     const [r, arg] = location.hash.slice(1).split('/');
     const V = { home: viewHome, '': viewHome, learn: viewLearn, unit: viewUnit, lesson: viewLesson, alphabet: viewAlphabet, cards: viewCards, games: viewGames, play: viewPlay, search: viewSearch, settings: viewSettings, tools: viewTools, roots: viewRoots, certificate: viewCertificate, sound: viewSound, contact: viewContact }[r || ''] || notFound;
-    view.innerHTML = V(arg);
+    view.innerHTML = V(arg); a11ySay(view);
     renderChrome(); initTraces(view);
     if (r === 'contact') mountContact();
     if (r === 'certificate') { certImages(); drawCert(); if (document.fonts) document.fonts.ready.then(drawCert); }
@@ -1055,7 +1084,7 @@
       $$('[data-hzpick]', pad).forEach(b => b.setAttribute('aria-pressed', b === hp));
       const box = $('.hz-box', pad); box._init = false; box.dataset.hz = ch; $('.trace-score', pad).innerHTML = '';
       const sb = $('.trace-btns [data-say]', pad); if (sb) sb.dataset.say = ch;
-      mountHanzi(box); say(ch); return;
+      say(ch); loadHanzi().then(() => mountHanzi(box), () => { box.textContent = ch; box.classList.add('hz-fallback'); }); return;
     }
     const ha = t.closest('[data-hzanim]'); if (ha) { const box = $('.hz-box', ha.closest('.hz-pad')); if (box && box._writer) { box._writer.cancelQuiz && box._writer.cancelQuiz(); box._writer.animateCharacter(); } return; }
     const hq = t.closest('[data-hzquiz]'); if (hq) { hanziQuiz(hq.closest('.hz-pad')); return; }
@@ -1066,8 +1095,8 @@
       $('.memo-level', sec).textContent = ['', 'Level 1: a few words hidden', 'Level 2: half the words hidden', 'Level 3: say the whole sentence'][lvl];
       mm0.classList.toggle('btn-primary', lvl > 0); return;
     }
-    const mr = t.closest('[data-memorep]'); if (mr) { let n = 0; const txt = mr.dataset.memorep; const go = () => { if (n++ < 3) say(txt, null, () => setTimeout(go, 400)); }; go(); return; }
-    const md0 = t.closest('[data-memodone]'); if (md0) { S.memo[md0.dataset.memodone] = today(); addXP(5); save(); toast('Marked as memorised. Revise it again tomorrow!'); return; }
+    const mr = t.closest('[data-memorep]'); if (mr) { let n = 0; const txt = mr.dataset.memorep; const go = () => { if (n++ < 3) say(txt, null, () => later(go, 400)); }; go(); return; }
+    const md0 = t.closest('[data-memodone]'); if (md0) { const first = !S.memo[md0.dataset.memodone]; S.memo[md0.dataset.memodone] = today(); if (first) addXP(5); save(); toast('Marked as memorised. Revise it again tomorrow!'); return; }
     const hidw = t.closest('.sent-tg .w.hid'); if (hidw) { hidw.classList.add('peek'); setTimeout(() => hidw.classList.remove('peek'), 1400); }
     const lt = t.closest('[data-letter]'); if (lt) { openLetter(lt.dataset.letter); return; }
     const qo = t.closest('[data-qopt]'); if (qo) { const [q, k] = qo.dataset.qopt.split(':'); quizPick(q, +k); return; }
@@ -1080,8 +1109,9 @@
       toast(nx ? `Well done! Next: ${plain(nx.title)}` : 'You finished the whole course. Congratulations!', 3500); return;
     }
     const wb = t.closest('[data-wbw]'); if (wb) { const box = $('.wbw', wb.closest('.sent')); box.hidden = !box.hidden; wb.classList.toggle('btn-primary', !box.hidden); return; }
-    const pl = t.closest('[data-playall]'); if (pl) { const dl = pl.closest('.dialogue'); sayAll($$('.dl-line', dl).map((r, idx) => ({ t: r.dataset.t, idx })), dl); return; }
-    const rp0 = t.closest('[data-roleplay]'); if (rp0) { const dl = rp0.closest('.dialogue'); dl.classList.toggle('roleplay'); rp0.classList.toggle('btn-primary'); toast(dl.classList.contains('roleplay') ? 'Role-play: the second speaker is hidden. Say those lines yourself, then tap to check.' : 'Role-play off'); return; }
+    const pl = t.closest('[data-playall]'); if (pl) { const dl = pl.closest('.dialogue'); const rp = dl.classList.contains('roleplay');
+      sayAll($$('.dl-line', dl).map((r, idx) => ({ t: r.dataset.t, idx, mine: rp && r.classList.contains('b') && !r.classList.contains('shown') })).filter(L => !L.mine), dl); return; }
+    const rp0 = t.closest('[data-roleplay]'); if (rp0) { const dl = rp0.closest('.dialogue'); $$('.dl-line.shown', dl).forEach(x => x.classList.remove('shown')); dl.classList.toggle('roleplay'); rp0.classList.toggle('btn-primary'); toast(dl.classList.contains('roleplay') ? 'Role-play: the second speaker is hidden. Say those lines yourself, then tap to check.' : 'Role-play off'); return; }
     const af = t.closest('[data-afilter]'); if (af) { alphaFilter = af.dataset.afilter; $$('[data-afilter]').forEach(b => b.setAttribute('aria-pressed', b === af)); $('#alphaGrid').innerHTML = alphaGrid(); return; }
     if (t.closest('#fcCard')) { fcFlip = !fcFlip; $('#fcCard').classList.toggle('flip', fcFlip); if (fcFlip && fcQueue[0]) say(fcQueue[0].t); return; }
     const fg = t.closest('[data-fc]'); if (fg) { fcGrade(+fg.dataset.fc); return; }
@@ -1097,13 +1127,14 @@
     }
     const sy = t.closest('[data-say]'); if (sy) {
       say(sy.dataset.say, null, null, sy.dataset.alt === '1');
-      const w = sy.closest('.sent-tg .w'); if (w) { $$('.sent-tg .w.on').forEach(x => x.classList.remove('on')); w.classList.add('on'); const sec = w.closest('.sent'); const box = $('.wbw', sec); if (box.hidden) { box.hidden = false; $('[data-wbw]', sec).classList.add('btn-primary'); } const tgt = box.children[+w.dataset.wi]; if (tgt) { tgt.style.outline = '2px solid var(--gold)'; setTimeout(() => { tgt.style.outline = ''; }, 1200); } }
+      const w = sy.closest('.sent-tg .w'); if (w && !(+w.closest('.sent').dataset.memoLevel > 0)) { $$('.sent-tg .w.on').forEach(x => x.classList.remove('on')); w.classList.add('on'); const sec = w.closest('.sent'); const box = $('.wbw', sec); if (box.hidden) { box.hidden = false; $('[data-wbw]', sec).classList.add('btn-primary'); } const tgt = box.children[+w.dataset.wi]; if (tgt) { tgt.style.outline = '2px solid var(--gold)'; setTimeout(() => { tgt.style.outline = ''; }, 1200); } }
       const bub = sy.closest('.roleplay .dl-line.b .tg'); if (bub) bub.closest('.dl-line').classList.add('shown');
     }
   });
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && !$('#modal').hidden) closeModal();
     if ((e.key === 'Enter' || e.key === ' ') && document.activeElement && document.activeElement.id === 'fcCard') { e.preventDefault(); document.activeElement.click(); }
+    else if ((e.key === 'Enter' || e.key === ' ') && document.activeElement && document.activeElement.matches('[data-say][role="button"]')) { e.preventDefault(); document.activeElement.click(); }
   });
   document.addEventListener('input', e => {
     if (e.target.id === 'tgScale') { S.tgScale = +e.target.value; applyTheme(); save(); }
@@ -1113,7 +1144,10 @@
   });
   document.addEventListener('change', e => {
     if (e.target.id === 'fcDeck') { fcDeck = e.target.value; rerender(); }
-    if (e.target.dataset && e.target.dataset.check) { S.checks[e.target.dataset.check] = e.target.checked; if (e.target.checked) addXP(1); save(); }
+    if (e.target.dataset && e.target.dataset.check) {
+      const k = e.target.dataset.check; S.xpChecks = S.xpChecks || {};
+      S.checks[k] = e.target.checked; if (e.target.checked && !S.xpChecks[k]) { S.xpChecks[k] = 1; addXP(1); } save();
+    }
   });
   document.addEventListener('submit', e => {
     if (e.target.closest('#rootSearch')) { e.preventDefault(); return; }
@@ -1122,7 +1156,8 @@
   });
   addEventListener('hashchange', route);
   addEventListener('scroll', onScroll, { passive: true });
-  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (S.theme === 'auto') renderChrome(); });
+  { const mq = matchMedia('(prefers-color-scheme: dark)'); const onScheme = () => { if (S.theme === 'auto') renderChrome(); };
+    if (mq.addEventListener) mq.addEventListener('change', onScheme); else if (mq.addListener) mq.addListener(onScheme); }
 
   /* index.html?saylist lists every text the app can speak (engine/audio.py records them); not linked anywhere */
   function sayList() {

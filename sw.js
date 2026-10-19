@@ -1,7 +1,7 @@
 /* Offline cache for Learn Mandarin. Copyright © ZyeemZia
    Pages and files open instantly from the cache and are refreshed in the background.
    VERSION is stamped by the build; a new version clears the old cache. */
-const VERSION = '4e189eca1c';
+const VERSION = 'fa8def04a5';
 const CACHE = 'learnmandarin-' + VERSION;
 const CORE = ['./', 'index.html', 'app.css', 'fonts.css', 'data.bundle.js', 'core.js', 'art.js', 'app.js', 'favicon.svg', 'book.html', 'book.css', 'book.js'];
 
@@ -19,7 +19,7 @@ self.addEventListener('fetch', e => {
   if (url.pathname.endsWith('.pdf')) return; // the large PDF is never cached
   e.respondWith(caches.open(CACHE).then(async cache => {
     const hit = await cache.match(req, { ignoreSearch: true });
-    const fresh = fetch(req).then(res => { if (res && res.ok && res.type === 'basic') cache.put(req, res.clone()); return res; }).catch(() => hit);
+    const fresh = fetch(req).then(res => { if (res && res.status === 200 && res.type === 'basic' && !req.headers.has('range')) cache.put(req, res.clone()).catch(() => {}); return res; }).catch(() => hit);
     return hit || fresh;
   }));
 });
